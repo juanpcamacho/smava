@@ -1,22 +1,22 @@
 ---
-- hosts: localhost     
+- hosts: localhost
   become: yes
-  vars:
-    aws_access_key: 'AKIAIMBUR6R6N6GRKYZA'
-    aws_secret_key: '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'
   tasks:
-    - local_action:
-      module: ec2_elb_lb
-      aws_access_key: "{{ aws_access_key }}"
-      aws_secret_key: "{{ aws_secret_key }}"
-      name: "smava ELB"
-      state: present
-      zones:
-        - us-west-1a
-        - us-west-1b
-      listeners:
-        - protocol: http # options are http, https, ssl, tcp
-          load_balancer_port: 80
-          instance_port: 80
-          proxy_protocol: True
-  
+    - name: Creation of the ELB
+      local_action:
+        module: ec2_elb_lb
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        name: "{{ ELB_NAME }}"
+        region: us-west-2
+        state: present
+        zones:
+          - us-west-2a
+          - us-west-2b
+        listeners:
+          - protocol: http # options are http, https, ssl, tcp
+            load_balancer_port: 80
+            instance_port: 80
+            proxy_protocol: True
+        instance_ids:
+          - "{{ INSTANCE_ID }}"
