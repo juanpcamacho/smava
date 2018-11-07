@@ -1,7 +1,14 @@
 ---
 - hosts: localhost
+  vars: 
+  ##Modify with the Workers of the Kube cluster
+    server_names:
+      - i-051d4b2712d4032d5
+      - i-079588ff39eb4be29
+
   become: yes
   tasks:
+    ##Creation of the ELB in different AZ for HA
     - name: Creation of the ELB
       local_action:
         module: ec2_elb_lb
@@ -14,9 +21,14 @@
           - us-west-2a
           - us-west-2b
         listeners:
-          - protocol: http # options are http, https, ssl, tcp
+          - protocol: http
             load_balancer_port: 80
             instance_port: 80
             proxy_protocol: True
-        instance_ids:
-          - "{{ INSTANCE_ID }}"
+        instance_ids: "{{ item }}"
+      with_items: "{{ server_names }}"
+    ##Modification of the template with the application name for Kube deployment.
+    - name: Modification of the template with the yml output
+      template:
+        src: template.j2
+        dest: app.yml

@@ -1,0 +1,89 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: {{ app_name }}-pv01
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/infrastructure/{{ app_name }}-pv01"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ app_name }}-pv01-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ app_name }}001
+  labels:
+    app: {{ app_name }}001
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ app_name }}001
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: {{ app_name }}001
+    spec:
+      containers:
+      - name: {{ app_name }}001
+        image: jpcamach/{{ app_name }}:latest
+        livenessProbe:
+          httpGet:
+            path: /portal/Portal.html
+            port: 8080
+            scheme: HTTPS
+          initialDelaySeconds: 60
+          periodSeconds: 3
+          failureThreshold: 3
+        ports:
+        - containerPort: 8080
+          name: {{ app_name }}001
+        volumeMounts:
+        - name: {{ app_name }}001-ps
+          mountPath: /data
+      - name: {{ app_name }}-nginx001
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+          name: {{ app_name }}001
+      volumes:
+      - name: {{ app_name }}001-ps
+        persistentVolumeClaim:
+          claimName: {{ app_name }}-pv01-claim
+
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ app_name }}001
+spec:
+  type: NodePort
+  ports:
+    - nodePort: 31319
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: {{ app_name }}001
