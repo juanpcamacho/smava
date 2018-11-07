@@ -32,3 +32,9 @@
       template:
         src: template.j2
         dest: app.yml
+    ##Creation of the application on kubernetes. Have in mind need to have kubctl installed and configured on localhost
+    - name: Creation of the application on kubernetes
+      command: kubectl create -f app.yml -n "{{ app_name }}"
+    ##Copy of NGINX config file for port redirect
+    - name: Copy NGINX config file
+      command: kubectl cp nginx.conf "{{ app_name }}"/"{{ app_name }}"-nginx001:/etc/nginx/
