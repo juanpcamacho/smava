@@ -1,0 +1,89 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: smava-pv01
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/infrastructure/smava-pv01"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: smava-pv01-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smava001
+  labels:
+    app: smava001
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smava001
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: smava001
+    spec:
+      containers:
+      - name: smava001
+        image: jpcamach/smava:latest
+        livenessProbe:
+          httpGet:
+            path: /portal/Portal.html
+            port: 8080
+            scheme: HTTPS
+          initialDelaySeconds: 60
+          periodSeconds: 3
+          failureThreshold: 3
+        ports:
+        - containerPort: 8080
+          name: smava001
+        volumeMounts:
+        - name: smava001-ps
+          mountPath: /data
+      - name: smava-nginx001
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+          name: smava001
+      volumes:
+      - name: smava001-ps
+        persistentVolumeClaim:
+          claimName: smava-pv01-claim
+
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smava001
+spec:
+  type: NodePort
+  ports:
+    - nodePort: 31319
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: smava001
